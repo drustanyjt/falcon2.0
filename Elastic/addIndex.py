@@ -11,7 +11,8 @@ from multiprocessing.pool import ThreadPool
 
 docType = "doc"
 # by default we connect to localhost:9200
-es = Elasticsearch(['https://5e9acbee.ngrok.io/'])
+# es = Elasticsearch(['https://5e9acbee.ngrok.io/'])
+es = Elasticsearch(['http://localhost:9200/'])
 path_to_data = '/app/'
 # path_to_data = '../'
 

@@ -10,7 +10,9 @@ from multiprocessing.pool import ThreadPool
 nlp = spacy.load('en_core_web_sm')
 
 # Link to Wikidata SPARQL endpoint
-wikidataSPARQL="http://node3.research.tib.eu:4010/sparql" 
+# wikidataSPARQL="http://node3.research.tib.eu:4010/sparql" 
+wikidataSPARQL="https://query.wikidata.org/bigdata/namespace/wdq/sparql" 
+
 
 stopWordsList=wiki_stopwords.getStopWords()
 comparsion_words=wiki_stopwords.getComparisonWords()
@@ -220,7 +222,11 @@ def reRank_relations(entities,relations,questionWord,questionRelationsNumber,que
                                     """)
                     sparql.setReturnFormat(JSON)
                     sparql.setMethod(POST)
+                    # print("sending sparql")
                     results1 = sparql.query().convert()
+                    # print("sent sparql")
+                    # print(results1)
+                    # print(sparql)
                     if results1['boolean']:
                         if head_rule:
                             targetType=get_question_word_type(questionWord)
@@ -659,7 +665,8 @@ def evaluate(raw,rules,evaluation=True):
             except: 
                 try:
                     mixedRelations[i],entities=reRank_relations(entities,mixedRelations[i],questionWord,questionRelationsNumber,question,k,head_rule)
-                except:
+                except Exception as e:
+                    raise e
                     continue
             
         mixedRelations=mix_list_items(mixedRelations,k)
@@ -707,9 +714,9 @@ def evaluate(raw,rules,evaluation=True):
             results.append(raw)
         
         return raw
-    except:
-        #raise
-        print("error")
+    except Exception as e:
+        raise e
+        # print("error")
 
 # To run Falcon 2.0 on test datasets
 def datasets_evaluate():
@@ -774,5 +781,6 @@ if __name__ == '__main__':
     global threading
     threading=False
     rules = [1,2,3,4,5,8,9,10,12,13,14]
-    process_text_E_R('Who is the wife of barack obama?',rules)
+    print(process_text_E_R('Who is the wife of barack obama?',rules))
+    print(process_text_E_R('What is the operating income for Qantas?',rules))
 

@@ -2,16 +2,17 @@ from elasticsearch import Elasticsearch
 import editdistance
 
 
-es = Elasticsearch(['http://node1.research.tib.eu:9200/'])
+# es = Elasticsearch(['http://node1.research.tib.eu:9200/'])
+es = Elasticsearch(['http://localhost:9200/'])
 docType = "doc"
 
 
 
 def entitySearch(query):
-    indexName = "wikidataentityindex"
+    indexName = "wikidataentity"
     results=[]
     ###################################################
-    elasticResults=es.search(index=indexName, doc_type=docType, body={
+    elasticResults=es.search(index=indexName, body={
               "query": {
                 "match" : { "label" : query } 
               }
@@ -25,7 +26,7 @@ def entitySearch(query):
             results.append([result["_source"]["label"],result["_source"]["uri"],result["_score"]*40,0])
 
     ###################################################
-    elasticResults=es.search(index=indexName, doc_type=docType, body={
+    elasticResults=es.search(index=indexName, body={
     "query": {
         "match" : {
             "label" : {
@@ -57,10 +58,10 @@ def entitySearch(query):
         #print("-----------")
         
 def propertySearch(query):
-    indexName = "wikidatapropertyindex"
+    indexName = "wikidataproperty"
     results = []
     ###################################################
-    elasticResults = es.search(index=indexName, doc_type=docType, body={
+    elasticResults = es.search(index=indexName, body={
         "query": {
             "match": {"label": query}
         }
@@ -74,7 +75,7 @@ def propertySearch(query):
             results.append([result["_source"]["label"], result["_source"]["uri"], result["_score"] * 40, 0])
 
     ###################################################
-    elasticResults=es.search(index=indexName, doc_type=docType, body={
+    elasticResults=es.search(index=indexName, body={
     "query": {
         "match" : {
             "label" : {
@@ -104,9 +105,9 @@ def propertySearch(query):
     return results[:15]
 
 def propertySearchExactmatch(query):
-    indexName = "wikidatapropertyindex"
+    indexName = "wikidataproperty"
     ###################################################
-    elasticResults = es.search(index=indexName, doc_type=docType, body={
+    elasticResults = es.search(index=indexName, body={
         "query": {
             "match": {"label": query}
         }
