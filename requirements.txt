@@ -6,3 +6,4 @@ requests
 pyspotlight
 SPARQLWrapper
 editdistance
+pydantic==1.10.11

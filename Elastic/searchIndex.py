@@ -3,7 +3,7 @@ import editdistance
 
 
 # es = Elasticsearch(['http://node1.research.tib.eu:9200/'])
-es = Elasticsearch(['http://localhost:9200/'])
+es = Elasticsearch(['http://localhost:9200/'], request_timeout=1200)
 docType = "doc"
 
 

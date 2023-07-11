@@ -20,6 +20,12 @@ comparsion_words=wiki_stopwords.getComparisonWords()
 # Flag evaluation variable to True to run Falcon on datasets
 evaluation = False
 
+global count
+count = 0
+global threading
+global results
+results = []
+threading =  True
 
 # To enlist the verbs in the input query
 def get_verbs(question):
@@ -39,9 +45,14 @@ def get_verbs(question):
                 if token.text in ent:
                     ent_list=ent.split(' ')
                     next_token=text[token.i+1]
-                    if ent_list.index(token.text)!= len(ent_list)-1 and next_token.dep_ =="compound":
-                        isEntity=True
-                        break
+                    try:
+                        if ent_list.index(token.text)!= len(ent_list)-1 and next_token.dep_ =="compound":
+                            isEntity=True
+                            break
+                    except ValueError as v:
+                        print("Encountered value error line 51 of main.py:", str(v))
+
+
             if not isEntity:
                 verbs.append(token.text)
     return verbs
@@ -440,9 +451,12 @@ def upper_all_entities(combinations,text):
                 if token.text in ent:
                     ent_list=ent.split(' ')
                     next_token=doc[token.i+1]
-                    if ent_list.index(token.text)!= len(ent_list)-1 and next_token.dep_ =="compound":
-                        isEntity=True
-                        break
+                    try:
+                        if ent_list.index(token.text)!= len(ent_list)-1 and next_token.dep_ =="compound":
+                            isEntity=True
+                            break
+                    except ValueError as v:
+                        print("Encountered ValueError on line 457 of main.py:", str(v))
             if not isEntity:
                 relations.append(token.text)
     for comb in combinations:
@@ -538,7 +552,7 @@ def evaluate(raw,rules,evaluation=True):
         r_entity=0
         p_relation=0
         r_relation=0
-        k=1
+        k=5
         questionRelationsNumber=0
         entities=[]
         questionWord=raw[0].strip().split(' ')[0] # Fetch the query head word
@@ -593,6 +607,7 @@ def evaluate(raw,rules,evaluation=True):
 
             if any(x==3 for x in rules): 
                 combinations=sort_combinations(combinations,question) 
+            "debug placeholder"
         
 
          
@@ -776,11 +791,8 @@ def datasets_evaluate():
 
 
 if __name__ == '__main__':
-    global count
     count=0
-    global threading
     threading=False
     rules = [1,2,3,4,5,8,9,10,12,13,14]
-    print(process_text_E_R('Who is the wife of barack obama?',rules))
     print(process_text_E_R('What is the operating income for Qantas?',rules))
-
+    print(process_text_E_R("What is Mary Lou Rettons International Olympic Committee athlete ID.",rules))
