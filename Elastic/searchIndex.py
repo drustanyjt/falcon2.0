@@ -1,4 +1,5 @@
 from elasticsearch import Elasticsearch
+import time
 import editdistance
 
 
@@ -6,10 +7,21 @@ import editdistance
 es = Elasticsearch(['http://localhost:9200/'], request_timeout=1200)
 docType = "doc"
 
+def timeis(func):
+    '''Decorator that reports the execution time.'''
+  
+    def wrap(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        # if end-start > 2:  
+        #     print("[LongExec]", func.__name__, end-start)
+        return result
+    return wrap
 
-
+@timeis
 def entitySearch(query):
-    indexName = "wikidataentity"
+    indexName = "wikidataentitiyindex"
     results=[]
     ###################################################
     elasticResults=es.search(index=indexName, body={
@@ -57,8 +69,9 @@ def entitySearch(query):
         #print (result["_source"])
         #print("-----------")
         
+@timeis
 def propertySearch(query):
-    indexName = "wikidataproperty"
+    indexName = "wikidatapropertyindex"
     results = []
     ###################################################
     elasticResults = es.search(index=indexName, body={
@@ -104,8 +117,9 @@ def propertySearch(query):
         
     return results[:15]
 
+@timeis
 def propertySearchExactmatch(query):
-    indexName = "wikidataproperty"
+    indexName = "wikidatapropertyindex"
     ###################################################
     elasticResults = es.search(index=indexName, body={
         "query": {

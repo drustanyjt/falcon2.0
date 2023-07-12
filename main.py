@@ -1,5 +1,6 @@
 import csv
 import spacy
+import time
 from src import stopwords as wiki_stopwords
 from Elastic import searchIndex as wiki_search_elastic
 from evaluation import evaluation as wiki_evaluation
@@ -220,6 +221,8 @@ def get_question_word_type(questionWord):
 def reRank_relations(entities,relations,questionWord,questionRelationsNumber,question,k,head_rule):
     correctRelations=[]
     sparql = SPARQLWrapper(wikidataSPARQL)
+    sparql_requests_made = 0
+    sparql_requests_time_spent = 0
     for entity_raw in entities:
         link_found_flag=False
         for entity in entity_raw:
@@ -233,8 +236,13 @@ def reRank_relations(entities,relations,questionWord,questionRelationsNumber,que
                                     """)
                     sparql.setReturnFormat(JSON)
                     sparql.setMethod(POST)
+                    start = time.time()
                     # print("sending sparql")
                     results1 = sparql.query().convert()
+                    end = time.time()
+                    sparql_requests_made += 1
+                    sparql_requests_time_spent += (end - start)
+                    # print("SPARQL Query time (s):", end - start)
                     # print("sent sparql")
                     # print(results1)
                     # print(sparql)
@@ -288,6 +296,11 @@ def reRank_relations(entities,relations,questionWord,questionRelationsNumber,que
                 #################################################################
 
   
+    print("[reRank_relations]:", question, "\n",
+        "SPARQL Requests Made:", sparql_requests_made, '\n'
+        "SPARQL Requests Total Time:", sparql_requests_time_spent, "\n"
+        "SPARQL Avg Time per Qn:", (sparql_requests_time_spent / sparql_requests_made) if sparql_requests_made > 0 else 0)
+
     return relations,entities
 
 def distinct_relations(relations):
@@ -371,6 +384,22 @@ def process_text_E_R(question,rules,k=1):
     entities=raw[2]
     relations=raw[1]
     return entities,relations
+
+def process_texts_E_R(questions:list[str], rules,k=1):
+    linked = []
+    if threading:
+        pool = ThreadPool()
+        map_results = pool.map(lambda q: evaluate([q], rules, evaluation=False), questions)
+        pool.close()
+        pool.join()
+        for r in map_results:
+            # print(r)
+            entities = r[2]
+            relations = r[1]
+            linked.append([entities, relations])
+        return linked
+    else:
+        raise Exception("No threading, not allowed to send batch")
 
 # To identify abbreviations as entity surface forms
 def extract_abbreviation(combinations):
@@ -789,10 +818,77 @@ def datasets_evaluate():
     print((correctEntities*100)/(correctEntities+wrongEntities))
     print(correctEntities+wrongEntities)
 
+def link(text, rules=[1,2,3,4,5,8,9,10,12,13,14]):
+    result = {
+        "entities_wikidata": [],
+        "relations_wikidata": [],
+    }
+    entities = result["entities_wikidata"]
+    relations = result["relations_wikidata"]
+    response = process_text_E_R(text, rules)
+    raw_ents = response[0]
+    raw_rels = response[1]
+    for ent in raw_ents:
+        entities.append({
+        "URI": ent[0].lstrip('<').rstrip('>'),
+        "surface form": ent[1]
+        })
+
+    for rel in raw_rels:
+        relations.append({
+        "URI": rel[0].lstrip('<').rstrip('>'),
+        "surface form": rel[1]
+        })
+
+    return result
+
+def link_batch(texts, rules=[1,2,3,4,5,8,9,10,12,13,14]):
+    global threading
+    threading = True
+    results = []
+    for response in process_texts_E_R(texts, rules):
+        single_result = {
+            "entities_wikidata": [],
+            "relations_wikidata": [],
+        }
+        entities = single_result["entities_wikidata"]
+        relations = single_result["relations_wikidata"]
+        raw_ents = response[0]
+        raw_rels = response[1]
+        for ent in raw_ents:
+            entities.append({
+            "URI": ent[0].lstrip('<').rstrip('>'),
+            "surface form": ent[1]
+            })
+
+        for rel in raw_rels:
+            relations.append({
+            "URI": rel[0].lstrip('<').rstrip('>'),
+            "surface form": rel[1]
+            })
+
+        results.append(single_result)
+    return results
 
 if __name__ == '__main__':
     count=0
-    threading=False
+    threading=True
     rules = [1,2,3,4,5,8,9,10,12,13,14]
-    print(process_text_E_R('What is the operating income for Qantas?',rules))
-    print(process_text_E_R("What is Mary Lou Rettons International Olympic Committee athlete ID.",rules))
+
+    # start = time.time()
+    # print(process_text_E_R('What is the operating income for Qantas?',rules))
+    # print(process_text_E_R("What is Mary Lou Rettons International Olympic Committee athlete ID.",rules))
+    # end = time.time()
+    # serial = end - start
+    # print("Serial:", serial)
+
+    qns = ['What is the operating income for Qantas?',
+           'What is Mary Lou Rettons International Olympic Committee athlete ID.']
+    start = time.time()
+    r = link_batch(qns, rules)
+    print(len(r))
+    print(r)
+    end = time.time()
+    pool = end - start
+    # print("Serial:", serial)
+    print("Pool:", pool)
