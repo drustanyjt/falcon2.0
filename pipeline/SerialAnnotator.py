@@ -31,7 +31,7 @@ class SerialAnnotator(BaseAnnotator):
       label_sparql.setMethod(POST)
       label_res = label_sparql.query().convert()
       try:
-        label = ["results"]["bindings"][0]['vr0']['value']
+        label = label_res["results"]["bindings"][0]['vr0']['value']
       except IndexError:
         print("Index error, no label found for")
         print(wd_obj)
