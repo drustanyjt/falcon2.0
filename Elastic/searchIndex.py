@@ -21,7 +21,7 @@ def timeis(func):
 
 @timeis
 def entitySearch(query):
-    indexName = "wikidataentitiyindex"
+    indexName = "wikidataentityindex"
     results=[]
     ###################################################
     elasticResults=es.search(index=indexName, body={

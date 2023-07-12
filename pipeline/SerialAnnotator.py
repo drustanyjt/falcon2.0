@@ -2,7 +2,8 @@ from pipeline.BaseAnnotator import BaseAnnotator
 from pipeline.WikidataObject import WikidataObject, from_json, from_uri
 from SPARQLWrapper import SPARQLWrapper, POST, JSON
 
-wikidataSPARQL="https://query.wikidata.org/bigdata/namespace/wdq/sparql" 
+# wikidataSPARQL="https://query.wikidata.org/bigdata/namespace/wdq/sparql" 
+wikidataSPARQL="https://wikidata.demo.openlinksw.com/sparql"
 
 class SerialAnnotator(BaseAnnotator):
   def __init__(self, name="SerialAnnotator"):
@@ -28,7 +29,14 @@ class SerialAnnotator(BaseAnnotator):
       )
       label_sparql.setReturnFormat(JSON)
       label_sparql.setMethod(POST)
-      label = label_sparql.query().convert()["results"]["bindings"][0]['vr0']['value']
+      label_res = label_sparql.query().convert()
+      try:
+        label = ["results"]["bindings"][0]['vr0']['value']
+      except IndexError:
+        print("Index error, no label found for")
+        print(wd_obj)
+        label = ''
+
       # print(label)
       fragments.append(wd_obj.id + ' ' + label)
     

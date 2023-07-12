@@ -36,9 +36,12 @@ class Falcon2Linker(BaseLinker):
   
   def link_batch(self, utterances):
     falcon2_batch_response = self.link_falcon2_batch(utterances)
+    assert len(falcon2_batch_response) == len(utterances)
     results = []
     for i, response in enumerate(falcon2_batch_response):
       entities, relations = response
+      assert isinstance(entities, list)
+      assert isinstance(relations, list)
       single_result = {
         "utterance": utterances[i],
         "ents": [],
@@ -49,6 +52,9 @@ class Falcon2Linker(BaseLinker):
         single_result["ents"].append(from_uri(ent, as_type="json"))
       
       for rel in relations:
+        if not rel:
+          print("[Falcon2Linker link_batch]: rel-{", rel, "}-was not well defined")
+          continue
         # Will always be wdt:
         rel = rel.replace("http://www.wikidata.org/entity/",
                           "http://www.wikidata.org/prop/direct/")
@@ -65,6 +71,9 @@ class Falcon2Linker(BaseLinker):
   
   def link_falcon2_batch(self, utterances):
     for i, text in enumerate(utterances):
+      if not text:
+        print("[Falcon2Linker link_falcon2_batch]: text-{", text, "}-was not well defined")
+        continue
       text = text.replace("What's", "What is") # Code crashes if you use What's or whats
       text = text.replace("what's", "what is")
       text=text.replace('"','')
