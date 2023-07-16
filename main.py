@@ -7,12 +7,14 @@ from evaluation import evaluation as wiki_evaluation
 from SPARQLWrapper import SPARQLWrapper, JSON, POST
 from multiprocessing.pool import ThreadPool
 
+print("main_virtuoso_noreranking")
 
 nlp = spacy.load('en_core_web_sm')
 
 # Link to Wikidata SPARQL endpoint
 # wikidataSPARQL="http://node3.research.tib.eu:4010/sparql" 
 wikidataSPARQL="https://wikidata.demo.openlinksw.com/sparql"
+# wikidataSPARQL="http://localhost:9999/bigdata/namespace/wdq/sparql"
 # wikidataSPARQL="https://query.wikidata.org/bigdata/namespace/wdq/sparql" 
 
 
@@ -45,15 +47,16 @@ def get_verbs(question):
                 ent=ent.replace("!","")
                 ent=ent.replace("\\","")
                 ent=ent.replace("#","")
-                if token.text in ent:
+                ent_list=ent.split(' ')
+                if token.text in ent_list:
                     ent_list=ent.split(' ')
                     next_token=text[token.i+1]
-                    try:
-                        if ent_list.index(token.text)!= len(ent_list)-1 and next_token.dep_ =="compound":
-                            isEntity=True
-                            break
-                    except ValueError as v:
-                        print("Encountered value error line 51 of main.py:", str(v))
+                    if ent_list.index(token.text)!= len(ent_list)-1 and next_token.dep_ =="compound":
+                        isEntity=True
+                        break
+                    # except ValueError as v:
+                    #     raise v
+                    #     print("Encountered value error line 51 of main.py:", str(v))
 
 
             if not isEntity:
@@ -221,6 +224,7 @@ def get_question_word_type(questionWord):
 
 # To generate triples by combining the entity and relation surface forms and rank them
 def reRank_relations(entities,relations,questionWord,questionRelationsNumber,question,k,head_rule):
+    return relations, entities # added this to ignore reranking
     correctRelations=[]
     sparql = SPARQLWrapper(wikidataSPARQL)
     sparql_requests_made = 0
@@ -239,7 +243,6 @@ def reRank_relations(entities,relations,questionWord,questionRelationsNumber,que
                     sparql.setReturnFormat(JSON)
                     sparql.setMethod(POST)
                     start = time.time()
-                    # print("sending sparql")
                     try:
                         results1 = sparql.query().convert()
                     except Exception as e:
@@ -248,11 +251,10 @@ def reRank_relations(entities,relations,questionWord,questionRelationsNumber,que
                         print(e)
                         time.sleep(timeout)
                         results1 = sparql.query().convert()
-
                     end = time.time()
                     sparql_requests_made += 1
                     sparql_requests_time_spent += (end - start)
-                    # print("SPARQL Query time (s):", end - start)
+                    print("SPARQL Query time (s):", end - start)
                     # print("sent sparql")
                     # print(results1)
                     # print(sparql)
@@ -328,8 +330,15 @@ def mix_list_items(mixedRelations,k):
     relations=[]
     for raw in mixedRelations:
         if any(relation[3]>0 for relation in raw):
-            for relation in sorted(raw, key=lambda x: (-x[3],int(x[1][x[1].rfind("/")+2:-1]),-x[2]))[:k]:
-                relations.append(relation)
+            try:
+                for relation in sorted(raw, key=lambda x: (-x[3],int(x[1][x[1].rfind("/")+2:-1]),-x[2]))[:k]:
+                    relations.append(relation)
+            except ValueError as v:
+                errmsg = "[\n"
+                for r in raw:
+                    errmsg += str(r) + ",\n"
+                errmsg += "]"
+                raise ValueError(f"raw:{errmsg} \n") from v
         else:
             raw= sorted(raw, key = lambda x: (-x[2],int(x[1][x[1].rfind("/")+2:-1])))
             for relation in raw[:k]:
@@ -487,15 +496,16 @@ def upper_all_entities(combinations,text):
                 ent=ent.replace("!","")
                 ent=ent.replace("\\","")
                 ent=ent.replace("#","")
-                if token.text in ent:
-                    ent_list=ent.split(' ')
+                ent_list=ent.split(' ')
+                if token.text in ent_list:
                     next_token=doc[token.i+1]
                     try:
                         if ent_list.index(token.text)!= len(ent_list)-1 and next_token.dep_ =="compound":
                             isEntity=True
                             break
                     except ValueError as v:
-                        print("Encountered ValueError on line 457 of main.py:", str(v))
+                        raise ValueError(f"\nent: {ent} \nent_split:{ent_list} \ntoken.text: {token.text} \n") from v
+                        # print("Encountered ValueError on line 457 of main.py:", str(v))
             if not isEntity:
                 relations.append(token.text)
     for comb in combinations:
@@ -705,7 +715,7 @@ def evaluate(raw,rules,evaluation=True):
         questionRelationsNumber=len(mixedRelations)
 
         if (len(mixedRelations)==0 and questionWord.lower()=="when"): 
-            mixedRelations.append([["time","<http://www.wikidata.org/wiki/Property:P569>",0,20,"when"]]) 
+            mixedRelations.append([["time","<http://www.wikidata.org/entity/P569>",0,20,"when"]]) 
     
         for i in range(len(mixedRelations)):
             #print(i)
@@ -727,7 +737,7 @@ def evaluate(raw,rules,evaluation=True):
         entities=mix_list_items_entities(entities,k)
         
         if nationalityFlag:
-            mixedRelations.append(["country","<https://www.wikidata.org/wiki/Property:P17>",20,"country"])
+            mixedRelations.append(["country","<http://www.wikidata.org/entity/P17>",20,"country"])
         
         # If the evaluation flag is set to True, run the Falcon 2.0 pipeline on datasets    
         if evaluation:
@@ -769,7 +779,7 @@ def evaluate(raw,rules,evaluation=True):
         
         return raw
     except Exception as e:
-        # raise e
+        raise e
         print("[main:Evaluiate Error]", e)
         raw.append([])
         raw.append([])
@@ -900,63 +910,66 @@ if __name__ == '__main__':
     # serial = end - start
     # print("Serial:", serial)
 
-    qns = ['What is the operating income for Qantas?',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'what is a cause of death that begins with the letter p and can be found on a CT scan',
-           'What is Mary Lou Rettons International Olympic Committee athlete ID.',
+    qns = [
+        # 'Who is the wife of Barack Obama?',
+        "what position did John Hume hold, when was once he elected, and what function did he hold in the 53rd Parliament of the United Kingdom",
+        # 'What is the operating income for Qantas?',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'what is a cause of death that begins with the letter p and can be found on a CT scan',
+        #    'What is Mary Lou Rettons International Olympic Committee athlete ID.',
            ]
     start = time.time()
     r = link_batch(qns, rules)

@@ -66,4 +66,4 @@ def from_uri(uri: str, as_type=None):
       else:
         raise Exception("Unknown as_type")
 
-  raise Exception("Prefix of URI not found")
+  raise Exception(f"Prefix of URI:{uri} not found")
