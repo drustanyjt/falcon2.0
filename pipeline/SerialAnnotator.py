@@ -11,7 +11,7 @@ wikidataSPARQL="https://wikidata.demo.openlinksw.com/sparql"
 class SerialAnnotator(BaseAnnotator):
   def __init__(self, name="SerialAnnotator"):
     super().__init__(name=name)
-    self.es = Elasticsearch(es_endpoint, timeout=10)
+    self.es = Elasticsearch(es_endpoint, timeout=100)
   
   def batch_annotate(self, batch_linked):
     # assert len(utterances) == len(ents) == len(rels)
