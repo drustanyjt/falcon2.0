@@ -9,7 +9,7 @@ from multiprocessing.pool import ThreadPool
 
 # Line 607 for k
 
-topKelements = 10
+topKelements = 1
 print(f"[Flacon2.0 main.py]: no reranking, k={topKelements}")
 
 nlp = spacy.load('en_core_web_sm')
