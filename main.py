@@ -7,7 +7,10 @@ from evaluation import evaluation as wiki_evaluation
 from SPARQLWrapper import SPARQLWrapper, JSON, POST
 from multiprocessing.pool import ThreadPool
 
-print("main_virtuoso_noreranking")
+# Line 607 for k
+
+topKelements = 5
+print(f"[Flacon2.0 main.py]: no reranking, k={topKelements}")
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -601,7 +604,7 @@ def evaluate(raw,rules,evaluation=True):
         r_entity=0
         p_relation=0
         r_relation=0
-        k=5
+        k=topKelements
         questionRelationsNumber=0
         entities=[]
         questionWord=raw[0].strip().split(' ')[0] # Fetch the query head word
