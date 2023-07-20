@@ -4,7 +4,9 @@ import editdistance
 
 
 # es = Elasticsearch(['http://node1.research.tib.eu:9200/'])
-es = Elasticsearch(['http://localhost:9200/'], request_timeout=1200)
+es = Elasticsearch(['http://localhost:9200/'], request_timeout=12000)
+wde = "wikidataentitiyindex"
+wdp = "wikidatapropertyindex"
 docType = "doc"
 
 def timeis(func):
@@ -21,7 +23,7 @@ def timeis(func):
 
 @timeis
 def entitySearch(query):
-    indexName = "wikidataentityindex"
+    indexName = wde
     results=[]
     ###################################################
     elasticResults=es.search(index=indexName, body={
@@ -71,7 +73,7 @@ def entitySearch(query):
         
 @timeis
 def propertySearch(query):
-    indexName = "wikidatapropertyindex"
+    indexName = wdp
     results = []
     ###################################################
     elasticResults = es.search(index=indexName, body={
@@ -119,7 +121,7 @@ def propertySearch(query):
 
 @timeis
 def propertySearchExactmatch(query):
-    indexName = "wikidatapropertyindex"
+    indexName = wdp
     ###################################################
     elasticResults = es.search(index=indexName, body={
         "query": {

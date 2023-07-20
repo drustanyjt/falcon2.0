@@ -7,11 +7,13 @@ from multiprocessing.pool import ThreadPool
 # wikidataSPARQL="https://query.wikidata.org/bigdata/namespace/wdq/sparql" 
 es_endpoint = "http://localhost:9200"
 wikidataSPARQL="https://wikidata.demo.openlinksw.com/sparql"
+wde = "wikidataentitiyindex"
+wdp = "wikidatapropertyindex"
 
 class SerialAnnotator(BaseAnnotator):
   def __init__(self, name="SerialAnnotator"):
     super().__init__(name=name)
-    self.es = Elasticsearch(es_endpoint, timeout=100)
+    self.es = Elasticsearch(es_endpoint, timeout=10000)
   
   def batch_annotate(self, batch_linked):
     # assert len(utterances) == len(ents) == len(rels)
@@ -55,7 +57,7 @@ class SerialAnnotator(BaseAnnotator):
         "uri": f"<http://www.wikidata.org/entity/${wd_obj.id}>",
       }
     }
-    indexName = 'wikidataentityindex' if wd_obj.id.startswith('Q') else 'wikidatapropertyindex'
+    indexName = wde if wd_obj.id.startswith('Q') else wdp
     size = 1
     response = self.es.search(index=indexName, query=query, size=size)
     results = response['hits']['hits']
