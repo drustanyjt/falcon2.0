@@ -1,12 +1,15 @@
 from elasticsearch import Elasticsearch
 import time
 import editdistance
+import os
 
 
 # es = Elasticsearch(['http://node1.research.tib.eu:9200/'])
 es = Elasticsearch(['http://localhost:9200/'], request_timeout=12000)
-wde = "wikidataentitiyindex"
-wdp = "wikidatapropertyindex"
+# wde = "wikidataentityindex"
+wde = os.environ['ES_ENTITY_INDEX']
+# wdp = "wikidatapropertyindex"
+wdp = os.environ['ES_PROPERTY_INDEX']
 docType = "doc"
 
 def timeis(func):

@@ -3,12 +3,13 @@ from pipeline.WikidataObject import WikidataObject, from_json, from_uri
 from elasticsearch import Elasticsearch
 from SPARQLWrapper import SPARQLWrapper, POST, JSON
 from multiprocessing.pool import ThreadPool
+import os
 
 # wikidataSPARQL="https://query.wikidata.org/bigdata/namespace/wdq/sparql" 
 es_endpoint = "http://localhost:9200"
 wikidataSPARQL="https://wikidata.demo.openlinksw.com/sparql"
-wde = "wikidataentitiyindex"
-wdp = "wikidatapropertyindex"
+wde = os.environ['ES_ENTITY_INDEX']
+wdp = os.environ['ES_PROPERTY_INDEX']
 
 class SerialAnnotator(BaseAnnotator):
   def __init__(self, name="SerialAnnotator"):
