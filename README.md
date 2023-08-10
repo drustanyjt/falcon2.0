@@ -1,5 +1,94 @@
 # FALCON 2.0
 
+This fork serves to store the amendments I made during my research of converting text-2-SPARQL.
+It primarily contains the code needed to generate datasets of annotated queries using Falcon2.0.
+
+## Environment Setup
+
+Before running anything setup the conad environment:
+
+```bash
+conda env create -f environment.yml
+```
+
+Then activate the environment, and install the spacy pre-trained model:
+
+```bash
+conda activate falcon2
+python -m spacy download en_core_web_sm
+```
+
+## ElasticSearch Setup
+
+From the original repository, notice that an Elasticsearch endpoint must be available to for Falcon2 to work.
+To set this up, we need to first create a new environment where `npm` is available to have access to the elasticdump cli tool,
+and a locally hosted version of Elasticsearch.
+
+### Locally Host ElasticSearch
+
+We will need to install Elasticsearch from an archive with the following commands:
+
+```bash
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.9.0-linux-x86_64.tar.gz
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.9.0-linux-x86_64.tar.gz.sha512
+shasum -a 512 -c elasticsearch-8.9.0-linux-x86_64.tar.gz.sha512 
+tar -xzf elasticsearch-8.9.0-linux-x86_64.tar.gz
+```
+
+Once it's installed, we will disable ssl authentication for convenience since this is not meant to be exposed online.
+The configuration file is `elasticsearch-8.9.0/config/elasticsearch.yml`.
+Around line 92,94,98,103 you should be able to configure various security features.
+As an example on line 92:
+
+```yml
+xpack.security.enabked: true
+```
+
+Should be set to
+
+```yml
+xpack.security.enabked: false
+```
+
+Lastly run Elasticsearch in the background (using screen, tmux, or just another terminal window):
+
+```bash
+./elasticsearch-8.9.0/bin/elasticsearch
+```
+
+After some time, the Elasticsearch endpoint should be available on port 9200 by default.
+
+### Load indexes into Elastic search
+
+Now create a new conda environment with `nodejs`:
+
+```bash
+conda create -n nodeenv nodejs
+```
+
+Activate this environment and the elasticdump utility.
+
+```bash
+conda activate nodeenv
+npm install elasticdump
+```
+
+You can now follow the steps to import the data as described in the [original README](https://github.com/SDM-TIB/falcon2.0#elastic-search-and-background-knowledge).
+
+## Run A Dataset generation pipeline
+
+Once the elastic dump is loaded, you can run a dataset generation pipeline by using any of the pipeline notebooks.
+1. pipeline1.ipynb is for using the normal falcon algorithm
+2. pipeline2.ipynb is for only creating top k entities + gold entities, with no relations
+3. pipeline3.ipynb is for creating top k entities + gold entities, with top k relations + gold relations.
+4. pipeline0.ipynb is for no annotations at all.
+
+All 3 look for lcquad2 data in `./lcquad2`,
+and output the generated links at the `output_links_dir` path.
+This must already be a valid path to an existing directory for the notebook to work.
+
+# Original README
+
 Falcon 2.0 is an entity and relation linking tool over Wikidata (accepted in CIKM 2020). The full CIKM paper can be found at the link: [Falcon 2.0 Paper](https://arxiv.org/pdf/1912.11270.pdf)
 
 It leverages fundamental principles of the English morphology (e.g., N-Gram tiling and N-Gramsplitting) to accurately map entities and relations in short texts to resources in  Wikidata. Falcon is available as Web API and can be queried using CURL: 
