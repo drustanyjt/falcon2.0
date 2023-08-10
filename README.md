@@ -2,6 +2,10 @@
 
 This fork serves to store the amendments I made during my research of converting text-2-SPARQL.
 It primarily contains the code needed to generate datasets of annotated queries using Falcon2.0.
+The main difference is that the reranking algorithm using a Wikidata SPARQL endpoint is commented out.
+(Making requests to online Wikidata endpoints is either slow or rate limited.
+Creating a locally hosted version might be possible, officially with [Blazegraph](https://github.com/wikimedia/wikidata-query-rdf/blob/master/docs/getting-started.md), or other [methods](https://wikidataworkshop.github.io/2022/papers/Wikidata_Workshop_2022_paper_4558.pdf) but it takes upwards of a week to load a full dump
+and a large amount of disk space.)
 
 ## Environment Setup
 
@@ -18,9 +22,11 @@ conda activate falcon2
 python -m spacy download en_core_web_sm
 ```
 
+Note the environment created with `environment.yml` should already have all the packages from `requirements.txt` as well.
+
 ## ElasticSearch Setup
 
-From the original repository, notice that an Elasticsearch endpoint must be available to for Falcon2 to work.
+From the original repository, notice that an Elasticsearch endpoint must be available for Falcon2 to work.
 To set this up, we need to first create a new environment where `npm` is available to have access to the elasticdump cli tool,
 and a locally hosted version of Elasticsearch.
 
@@ -41,7 +47,7 @@ Around line 92,94,98,103 you should be able to configure various security featur
 As an example on line 92:
 
 ```yml
-xpack.security.enabked: true
+xpack.security.enabled: true
 ```
 
 Should be set to
@@ -82,6 +88,9 @@ Once the elastic dump is loaded, you can run a dataset generation pipeline by us
 2. pipeline2.ipynb is for only creating top k entities + gold entities, with no relations
 3. pipeline3.ipynb is for creating top k entities + gold entities, with top k relations + gold relations.
 4. pipeline0.ipynb is for no annotations at all.
+
+**k** refers to the number of entities or relations suggested by Falcon2.0 for each entity/relation that was identified
+in the query. The value of k can be set by adjusting the **topKelements** variable in `./main.py`.
 
 All 3 look for lcquad2 data in `./lcquad2`,
 and output the generated links at the `output_links_dir` path.

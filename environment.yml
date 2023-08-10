@@ -1,4 +1,4 @@
-name: falcon2-test
+name: falcon2
 channels:
   - conda-forge
   - defaults
